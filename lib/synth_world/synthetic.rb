@@ -23,8 +23,7 @@ module SynthWorld
     prop :workspace, String
 
     prop :rules, _Hash(Symbol, String)
-    prop :processors, _Hash(Symbol, String)
-    prop :memory, SynthWorld::Synthetic::Memory, default: -> { SynthWorld::Synthetic::Memory.new(synthetic: self, workspace: "#{@workspace}/memory") }
+    prop :processors, _Hash(Symbol, Synthetic::Processor), default: -> { default_processors }
     prop :state, _Hash(Symbol, _Float), default: -> { {anxiety: 0.0, arousal: 0.0, temperature: 0.7} }
     prop :status, _OneOf(:offline, :asleep, :idle, :busy), default: :offline
     prop :active, _Boolean, default: true
@@ -66,10 +65,10 @@ module SynthWorld
     private def process message
       Literal.check message, Synthetic::Message
       @gatekeeper.assess incoming: message
-      @memory.record_incoming message
+      @processors.each { |p| p.process_incoming message }
       reply = reply_to message
       @gatekeeper.evaluate outgoing: reply
-      @memory.record_outgoing reply
+      @processors.each { |p| p.process_outgoing message }
       output reply
     end
 
@@ -102,9 +101,15 @@ module SynthWorld
       PROMPT
     end
 
-    private def output reply
+    def output reply
       # Just to STDOUT for now - will add more options later that are based on reply.source (or something similar)
       puts reply.contents
+    end
+
+    def default_processors
+      {
+        memory: SynthWorld::Synthetic::Memory.new(synthetic: self, workspace: "#{@workspace}/memory")
+      }
     end
   end
 end

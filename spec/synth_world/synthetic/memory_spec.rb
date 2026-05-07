@@ -4,8 +4,8 @@ require "async"
 require "tmpdir"
 
 RSpec.describe SynthWorld::Synthetic::Memory do
-  let(:tmpdir)  { Dir.mktmpdir("synth_memory_test") }
-  let(:time)    { Time.new(2026, 5, 7, 9, 0, 0) }
+  let(:tmpdir) { Dir.mktmpdir("synth_memory_test") }
+  let(:time) { Time.new(2026, 5, 7, 9, 0, 0) }
   after { FileUtils.rm_rf(tmpdir) }
 
   let(:synthetic) do
@@ -38,49 +38,49 @@ RSpec.describe SynthWorld::Synthetic::Memory do
     end
   end
 
-  describe "#record_incoming" do
+  describe "#process_incoming" do
     let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", from: "baz", time: time) }
 
     it "appends the message to the working memory file" do
-      memory.record_incoming(message)
+      memory.process_incoming(message)
       drain(1)
       expect(working_memory).to include("Hello")
     end
 
     it "records the sender" do
-      memory.record_incoming(message)
+      memory.process_incoming(message)
       drain(1)
       expect(working_memory).to include("from: baz")
     end
 
     it "records the timestamp" do
-      memory.record_incoming(message)
+      memory.process_incoming(message)
       drain(1)
       expect(working_memory).to include(time.iso8601)
     end
 
     it "appends rather than overwrites" do
       msg2 = SynthWorld::Synthetic::Message.new(contents: "Again", from: "baz", time: time)
-      memory.record_incoming(message)
-      memory.record_incoming(msg2)
+      memory.process_incoming(message)
+      memory.process_incoming(msg2)
       drain(2)
       expect(working_memory).to include("Hello")
       expect(working_memory).to include("Again")
     end
   end
 
-  describe "#record_outgoing" do
+  describe "#process_outgoing" do
     let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", from: "baz", time: time) }
-    let(:reply)   { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
+    let(:reply) { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
 
     it "appends the reply to the working memory file" do
-      memory.record_outgoing(reply)
+      memory.process_outgoing(reply)
       drain(1)
       expect(working_memory).to include("Hi there!")
     end
 
     it "records who was replied to" do
-      memory.record_outgoing(reply)
+      memory.process_outgoing(reply)
       drain(1)
       expect(working_memory).to include("replying-to: baz")
     end
@@ -88,11 +88,11 @@ RSpec.describe SynthWorld::Synthetic::Memory do
 
   describe "ordering" do
     let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", from: "baz", time: time) }
-    let(:reply)   { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
+    let(:reply) { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
 
     it "preserves incoming-then-outgoing order" do
-      memory.record_incoming(message)
-      memory.record_outgoing(reply)
+      memory.process_incoming(message)
+      memory.process_outgoing(reply)
       drain(2)
       expect(working_memory.index("Hello")).to be < working_memory.index("Hi there!")
     end

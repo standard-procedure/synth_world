@@ -35,6 +35,22 @@ module SynthWorld
       @timers ||= []
     end
 
+    action :process_incoming do |message|
+      Literal.check message, Synthetic::Message
+      _process_incoming message
+    end
+
+    def _process_incoming message
+    end
+
+    action :process_outgoing do |reply|
+      Literal.check reply, Synthetic::Reply
+      _process_outgoing reply
+    end
+
+    def _process_outgoing reply
+    end
+
     def start_timers
       self.class.timers.each do |(interval, timer)|
         start_timer interval, timer

@@ -4,13 +4,11 @@ module SynthWorld
   class Synthetic::Memory < Synthetic::Processor
     prop :workspace, String
 
-    action :record_incoming do |message|
-      Literal.check message, Synthetic::Message
+    def _process_incoming message
       File.write "#{workspace}/working.md", message.to_memory, mode: "a+"
     end
 
-    action :record_outgoing do |reply|
-      Literal.check reply, Synthetic::Reply
+    def _process_outgoing reply
       File.write "#{workspace}/working.md", reply.to_memory, mode: "a+"
     end
   end
