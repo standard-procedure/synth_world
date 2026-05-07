@@ -65,10 +65,10 @@ module SynthWorld
     private def process message
       Literal.check message, Synthetic::Message
       @gatekeeper.assess incoming: message
-      @processors.each { |p| p.process_incoming message }
+      @processors.each { |_, p| p.process_incoming message }
       reply = reply_to message
       @gatekeeper.evaluate outgoing: reply
-      @processors.each { |p| p.process_outgoing message }
+      @processors.each { |_, p| p.process_outgoing message }
       output reply
     end
 
