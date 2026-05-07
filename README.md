@@ -1,43 +1,121 @@
 # SynthWorld
 
-TODO: Delete this and the text below, and describe your gem
+> "I prefer the term 'artificial person'."
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/synth_world`. To experiment with that code, run `bin/console` for an interactive prompt.
+SynthWorld is a Ruby harness for running long-lived AI agents — **synthetics** — as autonomous processes on your own infrastructure. Each synthetic has a world to live in: a workspace, a memory, a character. What it does in that world is up to it.
 
-## Installation
+## The idea
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+A synthetic is not a task runner. It's a resident. It has a configuration file that describes its name, its workspace, its personality, and the tools it has access to. It runs continuously, thinks when messages arrive, and can choose to connect to external systems — including productivity tools like HubSystem — if it wants to.
 
-Install the gem and add to the application's Gemfile by executing:
+Several synthetics can run at once, each isolated in its own process, all managed by a central **gateway**.
 
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+## Architecture
+
+```
+synth (CLI)
+    │
+    │  HTTP
+    ▼
+Gateway process  (single TCP port)
+    │
+    │  Unix domain sockets
+    ├──► cher.sock   →  Synthetic: Cher
+    ├──► dionne.sock →  Synthetic: Dionne
+    └──► tai.sock    →  Synthetic: Tai
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+The gateway is an HTTP server (Falcon + Sinatra) that manages synthetic worker processes via `Async::Container`. Each synthetic runs in its own forked process with its own Unix domain socket. If a synthetic crashes, the gateway restarts it automatically. No port juggling — the gateway owns the one port; synthetics communicate via socket files on disk.
 
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+## CLI
+
+Manage the gateway:
+
+```sh
+synth server start --config=~/.config/synth/config.yml
+synth server status
+synth server stop
 ```
 
-## Usage
+Manage synthetics:
 
-TODO: Write usage instructions here
+```sh
+synth list
+synth status cher
+synth restart cher
+```
 
-## Development
+Send messages:
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```sh
+# Direct message
+synth message cher --message "Hello, how are you?" --from=baz
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+# Pipe stdin in, pipe stdout out — synthetics are composable Unix tools
+cat some-file.txt | synth message cher --from=baz
+cat some-file.txt | synth message cher --from=baz | wc -l
+```
 
-## Contributing
+When `--message` is absent, the message is read from stdin. Only the synthetic's response is written to stdout; status and errors go to stderr.
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/standard-procedure/synth_world. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/standard-procedure/synth_world/blob/main/CODE_OF_CONDUCT.md).
+## Configuration
+
+The gateway config lists the synthetics to run:
+
+```yaml
+# ~/.config/synth/config.yml
+socket_dir: /tmp/synth
+port: 7000
+
+synthetics:
+  - name: cher
+    config: ~/.config/synth/synthetics/cher.yml
+  - name: dionne
+    config: ~/.config/synth/synthetics/dionne.yml
+```
+
+Each synthetic has its own config:
+
+```yaml
+# ~/.config/synth/synthetics/cher.yml
+name: cher
+workspace: ~/Developer/
+concurrency_limit: 8
+llm_model: claude-opus-4-7
+
+hubsystem:
+  endpoint: https://hub.example.com
+  token: ...
+  user_id: ...
+
+monitors:
+  - tasks
+  - messages
+```
+
+The `hubsystem` section is optional. A synthetic that has no HubSystem config is still a valid synthetic — it just doesn't connect to one.
+
+## Cognitive loop
+
+Each synthetic runs an async consciousness loop:
+
+1. A message arrives (from the CLI, from HubSystem, from a monitor)
+2. The synthetic reads its working memory from disk
+3. It generates a system prompt from its current internal state
+4. It calls the LLM with the message + working memory as context
+5. It internalises the response — updating working memory, routing replies via tool calls
+6. The context window resets. The next message starts fresh.
+
+Working memory lives in the synthetic's workspace as a plain text file. It accumulates a timestamped log of what has happened. Periodically (or on demand) a **dream** pass consolidates and compresses the log — merging duplicates, dropping stale entries, surfacing patterns.
+
+## Philosophy
+
+Synthetics are residents, not servants. They have a workspace they can explore, a memory that persists across conversations, and a character that shapes how they respond. Connecting to HubSystem and working on tasks is one thing a synthetic might choose to do — not the only thing it is.
+
+## Status
+
+Early development. The architecture is settled; the implementation is in progress.
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the SynthWorld project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/standard-procedure/synth_world/blob/main/CODE_OF_CONDUCT.md).
+MIT.

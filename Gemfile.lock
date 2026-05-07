@@ -3,6 +3,7 @@ PATH
   specs:
     synth_world (0.1.0)
       async (~> 2.3)
+      async-container
       falcon (~> 0.5)
       literal (~> 1.9)
       ruby_llm (~> 1.0)

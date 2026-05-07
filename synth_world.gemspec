@@ -35,6 +35,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "async", "~> 2.3"
   spec.add_dependency "literal", "~> 1.9"
   spec.add_dependency "falcon", "~> 0.5"
+  spec.add_dependency "async-container"
   spec.add_dependency "sinatra"
   spec.add_dependency "thor"
 end
