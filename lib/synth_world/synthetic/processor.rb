@@ -1,22 +1,53 @@
 # frozen_string_literal: true
 
 module SynthWorld
+  # Transient actors - base class
+  #
+  # `action` - defines a method that can be called from outside the processor which will execute asynchronously within the processor
+  # `every` - triggers a timer every `interval` seconds that executes within the processor
   class Synthetic::Processor < Literal::Data
     prop :synthetic, SynthWorld::Synthetic
-    prop :rule, String
+    prop :rule, String, default: ""
+    prop :queue, Async::Queue, default: -> { Async::Queue.new }
 
     def call
       Async(transient: true) do
+        start_timers
         loop do
-          perform
-          Async::Task.yield
+          action, args = @queue.pop
+          instance_exec(*args, &action)
         end
       end
     end
     alias_method :start, :call
 
-    def perform
-      raise NotImplementedError
+    def self.action action, &implementation
+      define_method action.to_sym do |*args|
+        @queue.push [implementation, args]
+      end
+    end
+
+    def self.every interval, &timer
+      timers << [interval, timer]
+    end
+
+    def self.timers
+      @timers ||= []
+    end
+
+    def start_timers
+      self.class.timers.each do |(interval, timer)|
+        start_timer interval, timer
+      end
+    end
+
+    def start_timer interval, timer
+      Async(transient: true) do
+        loop do
+          sleep interval
+          @queue.push [timer, []]
+        end
+      end
     end
   end
 end

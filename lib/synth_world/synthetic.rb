@@ -12,6 +12,7 @@ require_relative "synthetic/message"
 require_relative "synthetic/reply"
 require_relative "synthetic/gatekeeper"
 require_relative "synthetic/processor"
+require_relative "synthetic/memory"
 
 module SynthWorld
   class Synthetic < Literal::Object
@@ -19,11 +20,13 @@ module SynthWorld
 
     prop :name, String
     prop :biography, String
+    prop :workspace, String
 
     prop :rules, _Hash(Symbol, String)
     prop :processors, _Hash(Symbol, String)
+    prop :memory, SynthWorld::Synthetic::Memory, default: -> { SynthWorld::Synthetic::Memory.new(synthetic: self, workspace: "#{@workspace}/memory") }
     prop :state, _Hash(Symbol, _Float), default: -> { {anxiety: 0.0, arousal: 0.0, temperature: 0.7} }
-    prop :status, _OneOf(:offline, :asleep, :online, :busy), default: :offline
+    prop :status, _OneOf(:offline, :asleep, :idle, :busy), default: :offline
     prop :active, _Boolean, default: true
     prop :concurrency_limit, _Integer, default: 8
     prop :queue, Async::Queue, default: -> { Async::Queue.new }
@@ -45,12 +48,16 @@ module SynthWorld
     end
 
     private def start_main_loop
+      @status = :idle
       while @active
         @queue.async(parent: @semaphore) { |message| process message }
       end
+    ensure
+      @status = :offline
     end
 
     private def start_processors
+      @memory.start
       @processors.each do |name, class_name|
         Object.const_get(class_name).new(synthetic: self, rule: @rules[name]).call
       end
@@ -59,8 +66,10 @@ module SynthWorld
     private def process message
       Literal.check message, Synthetic::Message
       @gatekeeper.assess incoming: message
+      @memory.record_incoming message
       reply = reply_to message
       @gatekeeper.evaluate outgoing: reply
+      @memory.record_outgoing reply
       output reply
     end
 
