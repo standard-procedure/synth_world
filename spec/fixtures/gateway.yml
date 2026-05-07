@@ -1,0 +1,8 @@
+port: 7000
+socket_dir: /tmp/synth
+pid_file: /tmp/synth/synth.pid
+log_file: /tmp/synth/synth.log
+
+synthetics:
+  - name: cher
+    config: spec/fixtures/synthetics/cher.yml

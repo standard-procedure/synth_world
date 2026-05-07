@@ -2,6 +2,12 @@
 
 require "async/semaphore"
 require_relative "types"
+
+module SynthWorld
+  class Synthetic < Literal::Object
+  end
+end
+
 require_relative "synthetic/message"
 require_relative "synthetic/reply"
 require_relative "synthetic/gatekeeper"

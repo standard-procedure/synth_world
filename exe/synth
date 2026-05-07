@@ -1,3 +1,4 @@
 #!/usr/bin/env ruby
 
 require "synth_world"
+SynthWorld::CLI.start(ARGV)
