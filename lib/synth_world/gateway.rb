@@ -43,7 +43,19 @@ module SynthWorld
         container.spawn(name: "synth--#{ref.name}") { start_synthetic(ref) }
       end
 
-      container.wait
+      # Async::Container::Forked installs TERM/INT traps in each forked child,
+      # but the supervisor itself has no traps — it just blocks on `wait`. So
+      # without these, `synth server stop` kills the supervisor immediately
+      # and the children get orphaned. Raise Interrupt in the main thread so
+      # we can wake `wait` up and stop the container gracefully.
+      trap(:TERM) { Thread.main.raise(Interrupt) }
+      trap(:INT) { Thread.main.raise(Interrupt) }
+
+      begin
+        container.wait
+      rescue Interrupt
+        container.stop
+      end
     end
 
     def start_http_server
@@ -72,6 +84,14 @@ module SynthWorld
         Async { synth.start }
         Async { accept_loop(synth, server) }
       end
+    ensure
+      synth&.stop
+      begin
+        server&.close
+      rescue
+        nil
+      end
+      File.unlink(socket_path) if socket_path && File.exist?(socket_path)
     end
 
     def accept_loop(synth, server)

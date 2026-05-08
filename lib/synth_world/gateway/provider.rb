@@ -30,9 +30,7 @@ module SynthWorld
       base_url = @api_base || ((provider_sym == :ollama) ? OLLAMA_DEFAULT_BASE : nil)
       env_key = API_KEY_ENV[provider_sym]
 
-      puts "--- #{@provider}"
-      puts model_name
-      puts ENV.fetch(env_key) if env_key
+      puts "Connecting to #{@provider}:#{@model}"
       RubyLLM.context do |config|
         config.default_model = model_name
         config.public_send("#{provider_sym}_api_key=", ENV.fetch(env_key)) if env_key

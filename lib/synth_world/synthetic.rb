@@ -121,7 +121,7 @@ module SynthWorld
     end
 
     def reply_to message
-      puts "...about to ask #{@main_context.inspect}"
+      puts "...about to ask #{@main_context.config.default_model}"
       response = main_chat
         .with_instructions(generate_system_prompt)
         .with_tools(*generate_tools)
