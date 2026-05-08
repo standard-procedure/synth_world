@@ -68,7 +68,7 @@ RSpec.describe SynthWorld::Synthetic::Memory do
 
   describe "#process_outgoing" do
     let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", time: time, headers: {from: "baz"}) }
-    let(:reply)   { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response, headers: {"replying-to": "baz"}) }
+    let(:reply) { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
 
     it "appends the reply to the working memory file" do
       memory.process_outgoing(reply)
@@ -79,7 +79,7 @@ RSpec.describe SynthWorld::Synthetic::Memory do
     it "records who was replied to" do
       memory.process_outgoing(reply)
       drain(1)
-      expect(working_memory).to include("replying-to: baz")
+      expect(working_memory).to include("replying_to: baz")
     end
   end
 

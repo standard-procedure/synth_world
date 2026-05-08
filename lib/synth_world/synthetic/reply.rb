@@ -6,8 +6,9 @@ module SynthWorld
     prop :message, SynthWorld::Synthetic::Message
     prop :response, RubyLLM::Message
     prop :time, Time, default: -> { Time.now }
-    prop :headers, _Hash(Symbol, _Any), default: {}.freeze
+    prop :headers, _Hash(Symbol, _Any), default: {}.freeze, reader: false
 
     def contents = @response.content
+    def headers = @headers.merge(replying_to: @message.headers[:from], tokens: @response.tokens)
   end
 end
