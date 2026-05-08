@@ -54,5 +54,13 @@ RSpec.describe SynthWorld::CLI do
       allow(Net::HTTP).to receive(:post).and_return(error_response)
       expect { run("message", "unknown", "--message", "hi", "--from", "Baz") }.to raise_error(SystemExit)
     end
+
+    it "surfaces an ErrorResponse returned in a 200 body" do
+      err_body = '{"error":"auth failed","time":"2026-05-08T09:00:00+01:00","replying_to":"Baz"}'
+      err_response = instance_double(Net::HTTPOK, is_a?: true, body: err_body, code: "200")
+      allow(Net::HTTP).to receive(:post).and_return(err_response)
+      expect { run("message", "cher", "--message", "hi", "--from", "Baz") }
+        .to raise_error(SystemExit).and output(/auth failed/).to_stderr
+    end
   end
 end

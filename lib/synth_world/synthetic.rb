@@ -13,6 +13,7 @@ end
 require_relative "synthetic/message"
 require_relative "synthetic/gateway_message"
 require_relative "synthetic/reply"
+require_relative "synthetic/error_response"
 require_relative "synthetic/gatekeeper"
 require_relative "synthetic/processor"
 require_relative "synthetic/memory"
@@ -71,9 +72,24 @@ module SynthWorld
 
     private def start_main_loop
       @status = :idle
-      @queue.async(parent: @semaphore) { |_task, message| process(message) }
+      @queue.async(parent: @semaphore) { |_task, message| safe_process(message) }
     ensure
       @status = :offline
+    end
+
+    # Run process within a rescue so a failure (eg. LLM auth error) doesn't
+    # leave the caller hanging — we still deliver something through the
+    # message's channel, just an ErrorResponse instead of a Reply.
+    private def safe_process(message)
+      process(message)
+    rescue => e
+      deliver_error(message, e)
+    end
+
+    private def deliver_error(message, error)
+      output(Synthetic::ErrorResponse.new(message: message, error: error.message))
+    rescue => e
+      warn "Synth #{@name}: failed to deliver error response: #{e.message}"
     end
 
     private def start_processors
@@ -93,7 +109,7 @@ module SynthWorld
     def reply_to message
       response = @main_context.chat
         .with_instructions(generate_system_prompt)
-        .with_tools(generate_tools)
+        .with_tools(*generate_tools)
         .with_temperature(@state[:temperature])
         .ask(generate_prompt_for(message), with: message.attachment)
       Synthetic::Reply.new message: message, response: response

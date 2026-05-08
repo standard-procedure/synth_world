@@ -86,9 +86,20 @@ module SynthWorld
         contents: payload.fetch("contents"),
         attachment: payload["attachment"],
         headers: (payload["headers"] || {}).transform_keys(&:to_sym),
+        # Defence in depth: always close the connection, even if write
+        # fails — otherwise the HTTP gateway hangs reading from the socket.
         reply_to: ->(reply) {
-          conn.write(reply.to_json)
-          conn.close_write
+          begin
+            conn.write(reply.to_json)
+          rescue
+            nil
+          ensure
+            begin
+              conn.close_write
+            rescue
+              nil
+            end
+          end
         }
       )
       synth.dispatch(message)

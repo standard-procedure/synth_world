@@ -131,6 +131,37 @@ RSpec.describe SynthWorld::Synthetic do
     end
   end
 
+  describe "#safe_process" do
+    it "delivers an ErrorResponse via the message when process raises" do
+      delivered = []
+      gateway_msg = SynthWorld::Synthetic::GatewayMessage.new(
+        contents: "hi", time: time, headers: {from: "baz"},
+        reply_to: ->(r) { delivered << r }
+      )
+
+      # Stub process to raise — exercises the rescue in safe_process
+      allow(synthetic).to receive(:process).and_raise(StandardError, "auth failed")
+
+      synthetic.send(:safe_process, gateway_msg)
+
+      expect(delivered.length).to eq(1)
+      expect(delivered.first).to be_a(SynthWorld::Synthetic::ErrorResponse)
+      expect(delivered.first.error).to eq("auth failed")
+    end
+
+    it "does not raise when delivery itself fails" do
+      failing_class = Class.new(SynthWorld::Synthetic::Message) do
+        def deliver(_)
+          raise StandardError, "deliver crashed"
+        end
+      end
+      bad_msg = failing_class.new(contents: "hi", time: time, headers: {from: "baz"})
+      allow(synthetic).to receive(:process).and_raise(StandardError, "boom")
+
+      expect { synthetic.send(:safe_process, bad_msg) }.not_to raise_error
+    end
+  end
+
   describe "#dispatch + main loop" do
     # Async::Queue#async runs the block inside an Async::Task that calls
     # block.(task, *args). The block signature must take the task first,

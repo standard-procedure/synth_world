@@ -25,6 +25,10 @@ module SynthWorld
         puts response.body
       else
         data = JSON.parse(response.body)
+        if data["error"]
+          warn "Synth error: #{data["error"]}"
+          exit 1
+        end
         say data["contents"].to_s
       end
     rescue Errno::ECONNREFUSED
