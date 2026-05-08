@@ -7,7 +7,7 @@ module SynthWorld
     DEFAULT_PROVIDERS = {
       "embedding" => {provider: :ollama, model: "nomic-embed-text"},
       "evaluation" => {provider: :ollama, model: "qwen2.5:3b"},
-      "default" => {provider: :openrouter, model: "google/gemma-4-26b-a4b-it:free"}
+      "default" => {provider: :openrouter, model: "openai/gpt-oss-120b:free"}
     }.freeze
 
     prop :port, _Integer, default: 7000

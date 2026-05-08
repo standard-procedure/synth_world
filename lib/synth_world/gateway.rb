@@ -37,10 +37,10 @@ module SynthWorld
     def start_container
       container = Async::Container::Forked.new
 
-      container.spawn(name: "gateway-http") { start_http_server }
+      container.spawn(name: "synth--gateway-http") { start_http_server }
 
       @config.synthetics.each do |ref|
-        container.spawn(name: ref.name) { start_synthetic(ref) }
+        container.spawn(name: "synth--#{ref.name}") { start_synthetic(ref) }
       end
 
       container.wait

@@ -30,10 +30,10 @@ RSpec.describe SynthWorld::Gateway::Configuration do
       expect(p.model).to eq("qwen2.5:3b")
     end
 
-    it "defaults default to openrouter / gemma" do
+    it "defaults default to openrouter / gpt-oss-120b" do
       p = config.providers["default"]
       expect(p.provider).to eq(:openrouter)
-      expect(p.model).to eq("google/gemma-4-26b-a4b-it:free")
+      expect(p.model).to eq("openai/gpt-oss-120b:free")
     end
   end
 
