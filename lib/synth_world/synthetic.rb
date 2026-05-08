@@ -72,7 +72,7 @@ module SynthWorld
       @processors.each { |_, p| p.process_incoming message }
       reply = reply_to message
       @gatekeeper.evaluate outgoing: reply
-      @processors.each { |_, p| p.process_outgoing message }
+      @processors.each { |_, p| p.process_outgoing reply }
       output reply
     end
 
