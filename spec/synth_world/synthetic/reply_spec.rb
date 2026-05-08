@@ -24,4 +24,27 @@ RSpec.describe SynthWorld::Synthetic::Reply do
       expect(r.headers[:channel]).to eq("whatsapp")
     end
   end
+
+  describe "#to_h" do
+    it "includes the contents" do
+      expect(reply.to_h[:contents]).to eq("Hi there!")
+    end
+
+    it "includes the message timestamp as an iso8601 string" do
+      expect(reply.to_h[:time]).to eq(time.iso8601)
+    end
+
+    it "includes the headers" do
+      expect(reply.to_h[:headers][:replying_to]).to eq("baz")
+    end
+  end
+
+  describe "#to_json" do
+    it "round-trips through JSON" do
+      parsed = JSON.parse(reply.to_json)
+      expect(parsed["contents"]).to eq("Hi there!")
+      expect(parsed["time"]).to eq(time.iso8601)
+      expect(parsed["headers"]["replying_to"]).to eq("baz")
+    end
+  end
 end

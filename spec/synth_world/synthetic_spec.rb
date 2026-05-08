@@ -99,6 +99,38 @@ RSpec.describe SynthWorld::Synthetic do
     end
   end
 
+  describe ".from_file" do
+    let(:yaml_path) { "#{tmpdir}/cher.yml" }
+    before do
+      File.write(yaml_path, <<~YAML)
+        name: cher
+        biography: a digital assistant
+        workspace: #{tmpdir}/synth-workspace
+        rules:
+          operating_system: "Be helpful"
+          gatekeeper_input_rule: "Assess"
+          gatekeeper_output_rule: "Evaluate"
+      YAML
+    end
+
+    it "builds a Synthetic with name, biography, and workspace" do
+      synth = described_class.from_file(yaml_path)
+      expect(synth.instance_variable_get(:@name)).to eq("cher")
+      expect(synth.instance_variable_get(:@biography)).to eq("a digital assistant")
+      expect(synth.instance_variable_get(:@workspace)).to eq("#{tmpdir}/synth-workspace")
+    end
+
+    it "converts rules keys to symbols" do
+      synth = described_class.from_file(yaml_path)
+      expect(synth.instance_variable_get(:@rules)[:operating_system]).to eq("Be helpful")
+    end
+
+    it "injects the supplied contexts" do
+      synth = described_class.from_file(yaml_path, main_context: main_context)
+      expect(synth.instance_variable_get(:@main_context)).to eq(main_context)
+    end
+  end
+
   describe "#process" do
     it "passes the incoming message to each processor" do
       synthetic.send(:process, message)

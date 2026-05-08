@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "json"
+require "socket"
+require "async"
 require "async/container"
 
 module SynthWorld
@@ -45,13 +48,61 @@ module SynthWorld
 
     def start_http_server
       Gateway::App.set :synthetic_names, @config.synthetics.map(&:name)
+      Gateway::App.set :socket_dir, @config.socket_dir
       Gateway::App.run!(port: @config.port, bind: @config.bind, server: %w[falcon webrick])
     end
 
     def start_synthetic(ref)
-      _contexts = contexts_for(ref)
-      # TODO: load ref.config_path, build Synthetic with contexts, connect Unix socket, start loop
-      loop { sleep 10 }
+      contexts = contexts_for(ref)
+      synth = Synthetic.from_file(
+        ref.config_path,
+        main_context: contexts[:main],
+        processing_context: contexts[:processing],
+        embedding_context: contexts[:embedding]
+      )
+
+      socket_path = "#{@config.socket_dir}/#{ref.name}.sock"
+      File.unlink(socket_path) if File.exist?(socket_path)
+      server = UNIXServer.new(socket_path)
+
+      Async do
+        Async { synth.start }
+        Async { accept_loop(synth, server) }
+      end
+    end
+
+    def accept_loop(synth, server)
+      loop do
+        conn = server.accept
+        Async { handle_connection(synth, conn) }
+      end
+    end
+
+    # Read one JSON request from the connection, dispatch a GatewayMessage
+    # whose reply_to writes the JSON reply back, then close.
+    def handle_connection(synth, conn)
+      payload = JSON.parse(conn.read)
+      message = Synthetic::GatewayMessage.new(
+        contents: payload.fetch("contents"),
+        attachment: payload["attachment"],
+        headers: (payload["headers"] || {}).transform_keys(&:to_sym),
+        reply_to: ->(reply) {
+          conn.write(reply.to_json)
+          conn.close_write
+        }
+      )
+      synth.dispatch(message)
+    rescue => e
+      begin
+        conn.write({error: e.message}.to_json)
+      rescue
+        nil
+      end
+      begin
+        conn.close_write
+      rescue
+        nil
+      end
     end
 
     def contexts_for(ref)

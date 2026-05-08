@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "ruby_llm"
+require "json"
+
 module SynthWorld
   class Synthetic::Reply < Literal::Data
     prop :message, SynthWorld::Synthetic::Message
@@ -10,5 +12,11 @@ module SynthWorld
 
     def contents = @response.content
     def headers = @headers.merge(replying_to: @message.headers[:from], tokens: @response.tokens)
+
+    def to_h
+      {contents: contents, time: @message.time.iso8601, headers: headers}
+    end
+
+    def to_json(*args) = to_h.to_json(*args)
   end
 end

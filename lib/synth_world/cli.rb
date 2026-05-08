@@ -11,6 +11,7 @@ end
 require_relative "cli/command"
 require_relative "cli/server"
 require_relative "cli/list"
+require_relative "cli/message"
 
 module SynthWorld
   class CLI < Thor

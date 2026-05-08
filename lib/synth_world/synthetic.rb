@@ -2,6 +2,7 @@
 
 require "async/semaphore"
 require "ruby_llm"
+require "yaml"
 require_relative "types"
 
 module SynthWorld
@@ -10,6 +11,7 @@ module SynthWorld
 end
 
 require_relative "synthetic/message"
+require_relative "synthetic/gateway_message"
 require_relative "synthetic/reply"
 require_relative "synthetic/gatekeeper"
 require_relative "synthetic/processor"
@@ -36,6 +38,21 @@ module SynthWorld
     prop :semaphore, Async::Semaphore, default: -> { Async::Semaphore.new(@concurrency_limit) }
     prop :gatekeeper, SynthWorld::Synthetic::Gatekeeper, default: -> { SynthWorld::Synthetic::Gatekeeper.new(synthetic: self, input_rule: @rules[:gatekeeper_input_rule], output_rule: @rules[:gatekeeper_output_rule]) }
 
+    def self.from_file(path, main_context: nil, processing_context: nil, embedding_context: nil)
+      data = YAML.safe_load_file(path)
+      rules = (data["rules"] || {}).transform_keys(&:to_sym)
+      new(
+        name: data.fetch("name"),
+        biography: data["biography"] || "",
+        workspace: File.expand_path(data.fetch("workspace")),
+        rules: rules,
+        processors: {},
+        main_context: main_context,
+        processing_context: processing_context,
+        embedding_context: embedding_context
+      )
+    end
+
     def start
       start_processors
       start_main_loop
@@ -44,26 +61,23 @@ module SynthWorld
 
     def stop
       @active = false
+      @queue.close
     end
 
-    def _perform(action)
-      @queue.push action
+    # Push a message onto the consumption queue. Wakes the main loop.
+    def dispatch(message)
+      @queue.push message
     end
 
     private def start_main_loop
       @status = :idle
-      while @active
-        @queue.async(parent: @semaphore) { |message| process message }
-      end
+      @queue.async(parent: @semaphore) { |message| process message }
     ensure
       @status = :offline
     end
 
     private def start_processors
-      @memory.start
-      @processors.each do |name, class_name|
-        Object.const_get(class_name).new(synthetic: self, rule: @rules[name]).call
-      end
+      @processors.each_value(&:start)
     end
 
     private def process message
@@ -109,9 +123,10 @@ module SynthWorld
       PROMPT
     end
 
-    def output reply
-      # Just to STDOUT for now - will add more options later that are based on reply.source (or something similar)
-      puts reply.contents
+    # Delegate delivery to the originating message — different message
+    # subclasses know how to route replies back to their channel.
+    def output(reply)
+      reply.message.deliver(reply)
     end
 
     def default_processors
