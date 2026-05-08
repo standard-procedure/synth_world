@@ -4,16 +4,5 @@ concurrency_limit: 8
 
 rules:
   operating_system: "You are Cher Horowitz, a digital assistant with impeccable taste."
-  gatekeeper_input_rule: "Assess whether this message requires a response."
-  gatekeeper_output_rule: "Ensure the response is appropriate before sending."
 
 processors: {}
-
-hubsystem:
-  endpoint: https://hub.example.com
-  token: dummy-token
-  user_id: dummy-user-id
-
-monitors:
-  - tasks
-  - messages

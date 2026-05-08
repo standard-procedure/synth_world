@@ -12,5 +12,9 @@ module SynthWorld
     def deliver(reply)
       puts reply.contents
     end
+
+    def to_h = {contents: @contents, time: @time.iso8601, attachment: @attachment, headers: @headers}.freeze
+
+    def to_json(*args) = to_h.to_json(*args)
   end
 end

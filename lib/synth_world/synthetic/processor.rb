@@ -35,20 +35,20 @@ module SynthWorld
       @timers ||= []
     end
 
-    action :process_incoming do |message|
+    action :process_incoming do |message, **metadata|
       Literal.check message, Synthetic::Message
-      _process_incoming message
+      _process_incoming message, **metadata
     end
 
-    def _process_incoming message
+    def _process_incoming message, **metadata
     end
 
-    action :process_outgoing do |reply|
+    action :process_outgoing do |reply, **metadata|
       Literal.check reply, Synthetic::Reply
-      _process_outgoing reply
+      _process_outgoing reply, **metadata
     end
 
-    def _process_outgoing reply
+    def _process_outgoing reply, **metadata
     end
 
     def start_timers

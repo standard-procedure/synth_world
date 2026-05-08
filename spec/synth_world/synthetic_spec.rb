@@ -37,8 +37,8 @@ RSpec.describe SynthWorld::Synthetic do
     inc = incoming_calls
     out = outgoing_calls
     Class.new(SynthWorld::Synthetic::Processor) do
-      define_method(:process_incoming) { |msg| inc << msg }
-      define_method(:process_outgoing) { |reply| out << reply }
+      define_method(:process_incoming) { |msg, **_meta| inc << msg }
+      define_method(:process_outgoing) { |reply, **_meta| out << reply }
     end
   end
 
@@ -55,11 +55,28 @@ RSpec.describe SynthWorld::Synthetic do
 
   let(:processor) { capturing_processor_class.new(synthetic: host_synthetic) }
 
+  # A Gatekeeper subclass whose assess/evaluate are no-ops — keeps the
+  # process-level tests focused on orchestration without round-tripping
+  # to the processing LLM each time.
+  let(:noop_gatekeeper_class) do
+    Class.new(SynthWorld::Synthetic::Gatekeeper) do
+      def assess(incoming:, context: "")
+        "REPLY"
+      end
+
+      def evaluate(outgoing:, context: "")
+        "HIGH_QUALITY"
+      end
+    end
+  end
+  let(:gatekeeper) { noop_gatekeeper_class.new(synthetic: host_synthetic) }
+
   subject(:synthetic) do
     described_class.new(
       name: "test", biography: "test", workspace: tmpdir,
-      rules: {gatekeeper_input_rule: "", gatekeeper_output_rule: "", operating_system: "Be helpful"},
+      rules: {operating_system: "Be helpful"},
       processors: {capturer: processor},
+      gatekeeper: gatekeeper,
       main_context: main_context
     )
   end
@@ -137,11 +154,11 @@ RSpec.describe SynthWorld::Synthetic do
     end
   end
 
-  describe "#generate_message_history" do
+  describe "#working_memory" do
     let(:synth) do
       described_class.new(
         name: "test", biography: "test", workspace: tmpdir,
-        rules: {gatekeeper_input_rule: "", gatekeeper_output_rule: ""}
+        rules: {}
       )
     end
 
@@ -152,16 +169,16 @@ RSpec.describe SynthWorld::Synthetic do
         action, args = memory.queue.pop
         memory.instance_exec(*args, &action)
       end
-      expect(synth.generate_message_history).to include("earlier message")
+      expect(synth.working_memory).to include("earlier message")
     end
 
-    it "returns an empty string when there is no memory processor" do
+    it "returns nil when there is no memory processor" do
       synth_without_memory = described_class.new(
         name: "no-mem", biography: "x", workspace: tmpdir,
-        rules: {gatekeeper_input_rule: "", gatekeeper_output_rule: ""},
+        rules: {},
         processors: {}
       )
-      expect(synth_without_memory.generate_message_history).to eq("")
+      expect(synth_without_memory.working_memory).to be_nil
     end
   end
 

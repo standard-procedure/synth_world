@@ -12,7 +12,7 @@ providers:
     model: "qwen2.5:3b"
   default:
     provider: openrouter
-    model: "google/gemma-4-26b-a4b-it:free"
+    model: "openai/gpt-oss-120b:free"
 
 synthetics:
   - name: cher

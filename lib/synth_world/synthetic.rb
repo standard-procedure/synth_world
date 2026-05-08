@@ -28,19 +28,24 @@ module SynthWorld
 
     prop :rules, _Hash(Symbol, String)
     prop :processors, _Hash(Symbol, Synthetic::Processor), default: -> { default_processors }
-    prop :main_context, _Nilable(RubyLLM::Context)
-    prop :main_provider, _Nilable(Symbol)
-    prop :processing_context, _Nilable(RubyLLM::Context)
-    prop :processing_provider, _Nilable(Symbol)
-    prop :embedding_context, _Nilable(RubyLLM::Context)
-    prop :embedding_provider, _Nilable(Symbol)
+    prop :main_context, _Nilable(RubyLLM::Context), reader: :public
+    prop :main_provider, _Nilable(Symbol), reader: :public
+    prop :processing_context, _Nilable(RubyLLM::Context), reader: :public
+    prop :processing_provider, _Nilable(Symbol), reader: :public
+    prop :embedding_context, _Nilable(RubyLLM::Context), reader: :public
+    prop :embedding_provider, _Nilable(Symbol), reader: :public
     prop :state, _Hash(Symbol, _Float), default: -> { {anxiety: 0.0, arousal: 0.0, temperature: 0.7} }
     prop :status, _OneOf(:offline, :asleep, :idle, :busy), default: :offline
     prop :active, _Boolean, default: true
     prop :concurrency_limit, _Integer, default: 8
     prop :queue, Async::Queue, default: -> { Async::Queue.new }
     prop :semaphore, Async::Semaphore, default: -> { Async::Semaphore.new(@concurrency_limit) }
-    prop :gatekeeper, SynthWorld::Synthetic::Gatekeeper, default: -> { SynthWorld::Synthetic::Gatekeeper.new(synthetic: self, input_rule: @rules[:gatekeeper_input_rule], output_rule: @rules[:gatekeeper_output_rule]) }
+    prop :gatekeeper, SynthWorld::Synthetic::Gatekeeper, default: -> {
+      gk_args = {synthetic: self}
+      gk_args[:input_rule] = @rules[:gatekeeper_input_rule] if @rules[:gatekeeper_input_rule]
+      gk_args[:output_rule] = @rules[:gatekeeper_output_rule] if @rules[:gatekeeper_output_rule]
+      SynthWorld::Synthetic::Gatekeeper.new(**gk_args)
+    }
 
     def self.from_file(path,
       main_context: nil, main_provider: nil,
@@ -76,7 +81,7 @@ module SynthWorld
 
     # Push a message onto the consumption queue. Wakes the main loop.
     def dispatch(message)
-      puts "#{@name} received a message..."
+      puts "#{@name} received #{message.class}..."
       @queue.push message
     end
 
@@ -91,7 +96,7 @@ module SynthWorld
     # leave the caller hanging — we still deliver something through the
     # message's channel, just an ErrorResponse instead of a Reply.
     private def safe_process(message)
-      puts "...#{@name} processing message"
+      puts "...#{@name} processing #{message.class}"
       process(message)
     rescue => e
       warn e.message
@@ -111,11 +116,12 @@ module SynthWorld
 
     private def process message
       Literal.check message, Synthetic::Message
-      @gatekeeper.assess incoming: message
-      @processors.each { |_, p| p.process_incoming message }
+      context = working_memory_summary.to_s
+      assessment = @gatekeeper.assess incoming: message, context: context
+      @processors.each { |_, p| p.process_incoming message, threat_assessment: assessment }
       reply = reply_to message
-      @gatekeeper.evaluate outgoing: reply
-      @processors.each { |_, p| p.process_outgoing reply }
+      evaluation = @gatekeeper.evaluate outgoing: reply, context: context
+      @processors.each { |_, p| p.process_outgoing reply, evaluation: evaluation }
       output reply
     end
 
@@ -145,7 +151,6 @@ module SynthWorld
     def generate_system_prompt
       <<~PROMPT
         #{@rules[:operating_system]}
-        Other stuff
       PROMPT
     end
 
@@ -153,14 +158,20 @@ module SynthWorld
       []
     end
 
-    def generate_message_history
-      @processors[:memory]&.working_memory || ""
+    def working_memory
+      @processors[:memory]&.working_memory
+    end
+
+    def working_memory_summary
+      @processors[:memory]&.working_summary
     end
 
     def generate_prompt_for message
       <<~PROMPT
-        #{generate_message_history}
-        Other stuff
+        ## Memories        
+        #{working_memory}
+        
+        ## Incoming Message
         #{message.contents}
       PROMPT
     end
