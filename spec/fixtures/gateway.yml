@@ -10,6 +10,9 @@ providers:
   evaluation:
     provider: ollama
     model: "qwen2.5:3b"
+  gatekeeper:
+    provider: openrouter
+    model: "openai/gpt-oss-120b:free"
   default:
     provider: openrouter
     model: "openai/gpt-oss-120b:free"

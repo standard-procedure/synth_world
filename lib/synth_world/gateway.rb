@@ -73,7 +73,9 @@ module SynthWorld
         processing_context: providers[:processing].context,
         processing_provider: providers[:processing].provider,
         embedding_context: providers[:embedding].context,
-        embedding_provider: providers[:embedding].provider
+        embedding_provider: providers[:embedding].provider,
+        gatekeeper_context: providers[:gatekeeper].context,
+        gatekeeper_provider: providers[:gatekeeper].provider
       )
 
       socket_path = "#{@config.socket_dir}/#{ref.name}.sock"
@@ -147,7 +149,8 @@ module SynthWorld
       {
         main: @config.providers.fetch(ref.main_provider),
         processing: @config.providers.fetch(ref.processing_provider),
-        embedding: @config.providers.fetch(ref.embedding_provider)
+        embedding: @config.providers.fetch(ref.embedding_provider),
+        gatekeeper: @config.providers.fetch(ref.gatekeeper_provider)
       }
     end
   end

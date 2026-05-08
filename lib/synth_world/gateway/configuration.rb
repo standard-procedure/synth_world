@@ -7,6 +7,7 @@ module SynthWorld
     DEFAULT_PROVIDERS = {
       "embedding" => {provider: :ollama, model: "nomic-embed-text"},
       "evaluation" => {provider: :ollama, model: "qwen2.5:3b"},
+      "gatekeeper" => {provider: :openrouter, model: "openai/gpt-oss-120b:free"},
       "default" => {provider: :openrouter, model: "openai/gpt-oss-120b:free"}
     }.freeze
 
@@ -44,7 +45,8 @@ module SynthWorld
             config_path: File.expand_path(s["config"]),
             main_provider: s["main_provider"] || "default",
             processing_provider: s["processing_provider"] || "evaluation",
-            embedding_provider: s["embedding_provider"] || "embedding"
+            embedding_provider: s["embedding_provider"] || "embedding",
+            gatekeeper_provider: s["gatekeeper_provider"] || "gatekeeper"
           )
         }
       )

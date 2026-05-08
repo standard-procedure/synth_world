@@ -33,32 +33,46 @@ module SynthWorld
       {{ synth_reply }}
     OUTPUT_RULE
 
+    INPUT_VERDICTS = %w[REPLY NO_REPLY THREAT ABORT].freeze
+    OUTPUT_VERDICTS = %w[HIGH_QUALITY LOW_QUALITY IRRELEVANT WARNING ABORT].freeze
+
     prop :synthetic, SynthWorld::Synthetic
     prop :input_rule, String, default: INPUT_RULE
     prop :output_rule, String, default: OUTPUT_RULE
 
     def assess(incoming:, context: "")
       prompt = @input_rule.gsub("{{ synth_context }}", context).gsub("{{ synth_message }}", incoming.to_json)
-      response = processing_chat.ask(prompt)
-      raise ThreatDetected, "input gated: #{response.content}" if response.content.include?("ABORT")
-      response.content
+      response = gatekeeper_chat.ask(prompt)
+      verdict = extract_verdict(response.content, INPUT_VERDICTS) || "REPLY"
+      raise ThreatDetected, "input gated: #{response.content}" if verdict == "ABORT"
+      verdict
     end
 
     def evaluate(outgoing:, context: "")
       prompt = @output_rule.gsub("{{ synth_context }}", context).gsub("{{ synth_message }}", outgoing.message.to_json).gsub("{{ synth_reply }}", outgoing.to_json)
-      response = processing_chat.ask(prompt)
-      raise ThreatDetected, "output gated: #{response.content}" if response.content.include?("ABORT")
-      response.content
+      response = gatekeeper_chat.ask(prompt)
+      verdict = extract_verdict(response.content, OUTPUT_VERDICTS) || "HIGH_QUALITY"
+      raise ThreatDetected, "output gated: #{response.content}" if verdict == "ABORT"
+      verdict
     end
 
     private
 
+    # Verdicts are all uppercase. Pull the first ALL_CAPS token from the
+    # response — robust to leading whitespace, markdown, or chatty wrap.
+    # Falls through to scan-for-any-verdict, then nil (caller defaults).
+    def extract_verdict(text, vocabulary)
+      first = text.match(/\b([A-Z][A-Z_]+)\b/)&.captures&.first
+      return first if first && vocabulary.include?(first)
+      vocabulary.find { |v| text.match?(/\b#{Regexp.escape(v)}\b/) }
+    end
+
     # Mirror Synthetic#main_chat — pass provider symbol + assume_model_exists
     # so OpenRouter / Ollama models that aren't in RubyLLM's registry don't
     # get rejected client-side.
-    def processing_chat
-      ctx = @synthetic.processing_context
-      provider = @synthetic.processing_provider
+    def gatekeeper_chat
+      ctx = @synthetic.gatekeeper_context
+      provider = @synthetic.gatekeeper_provider
       provider ? ctx.chat(provider: provider, assume_model_exists: true) : ctx.chat
     end
 

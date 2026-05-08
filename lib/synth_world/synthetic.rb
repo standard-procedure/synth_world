@@ -34,6 +34,8 @@ module SynthWorld
     prop :processing_provider, _Nilable(Symbol), reader: :public
     prop :embedding_context, _Nilable(RubyLLM::Context), reader: :public
     prop :embedding_provider, _Nilable(Symbol), reader: :public
+    prop :gatekeeper_context, _Nilable(RubyLLM::Context), reader: :public
+    prop :gatekeeper_provider, _Nilable(Symbol), reader: :public
     prop :state, _Hash(Symbol, _Float), default: -> { {anxiety: 0.0, arousal: 0.0, temperature: 0.7} }
     prop :status, _OneOf(:offline, :asleep, :idle, :busy), default: :offline
     prop :active, _Boolean, default: true
@@ -50,7 +52,8 @@ module SynthWorld
     def self.from_file(path,
       main_context: nil, main_provider: nil,
       processing_context: nil, processing_provider: nil,
-      embedding_context: nil, embedding_provider: nil)
+      embedding_context: nil, embedding_provider: nil,
+      gatekeeper_context: nil, gatekeeper_provider: nil)
       data = YAML.safe_load_file(path)
       rules = (data["rules"] || {}).transform_keys(&:to_sym)
       new(
@@ -64,7 +67,9 @@ module SynthWorld
         processing_context: processing_context,
         processing_provider: processing_provider,
         embedding_context: embedding_context,
-        embedding_provider: embedding_provider
+        embedding_provider: embedding_provider,
+        gatekeeper_context: gatekeeper_context,
+        gatekeeper_provider: gatekeeper_provider
       )
     end
 

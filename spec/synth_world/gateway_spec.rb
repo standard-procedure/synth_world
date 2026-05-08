@@ -6,7 +6,8 @@ RSpec.describe SynthWorld::Gateway do
       providers: {
         "default" => SynthWorld::Gateway::Provider.new(name: "default", provider: :ollama, model: "llama3"),
         "evaluation" => SynthWorld::Gateway::Provider.new(name: "evaluation", provider: :ollama, model: "qwen2.5:3b"),
-        "embedding" => SynthWorld::Gateway::Provider.new(name: "embedding", provider: :ollama, model: "nomic-embed-text")
+        "embedding" => SynthWorld::Gateway::Provider.new(name: "embedding", provider: :ollama, model: "nomic-embed-text"),
+        "gatekeeper" => SynthWorld::Gateway::Provider.new(name: "gatekeeper", provider: :ollama, model: "qwen2.5:3b")
       }
     )
   end
@@ -23,7 +24,7 @@ RSpec.describe SynthWorld::Gateway do
   describe "#contexts_for" do
     it "returns a context for each role using the synthetic's provider names" do
       contexts = gateway.send(:contexts_for, ref)
-      expect(contexts.keys).to contain_exactly(:main, :processing, :embedding)
+      expect(contexts.keys).to contain_exactly(:main, :processing, :embedding, :gatekeeper)
       expect(contexts.values).to all(be_a(RubyLLM::Context))
     end
 
@@ -32,6 +33,7 @@ RSpec.describe SynthWorld::Gateway do
       expect(contexts[:main].config.default_model).to eq("llama3")
       expect(contexts[:processing].config.default_model).to eq("qwen2.5:3b")
       expect(contexts[:embedding].config.default_model).to eq("nomic-embed-text")
+      expect(contexts[:gatekeeper].config.default_model).to eq("qwen2.5:3b")
     end
 
     it "honours explicit provider overrides on the synthetic" do

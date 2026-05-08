@@ -7,5 +7,6 @@ module SynthWorld
     prop :main_provider, String, default: "default"
     prop :processing_provider, String, default: "evaluation"
     prop :embedding_provider, String, default: "embedding"
+    prop :gatekeeper_provider, String, default: "gatekeeper"
   end
 end

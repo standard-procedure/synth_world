@@ -15,7 +15,7 @@ RSpec.describe SynthWorld::Gateway::Configuration do
     end
 
     it "includes the three built-in providers" do
-      expect(config.providers.keys).to include("embedding", "evaluation", "default")
+      expect(config.providers.keys).to include("embedding", "evaluation", "gatekeeper", "default")
     end
 
     it "defaults embedding to ollama / nomic-embed-text" do
@@ -60,7 +60,7 @@ RSpec.describe SynthWorld::Gateway::Configuration do
     it "keeps built-in provider defaults when providers section is absent" do
       path = write_config("port: 7000\n")
       config = described_class.from_file(path)
-      expect(config.providers.keys).to include("embedding", "evaluation", "default")
+      expect(config.providers.keys).to include("embedding", "evaluation", "gatekeeper", "default")
     end
 
     it "overrides a built-in provider when specified in the file" do
@@ -134,6 +134,10 @@ RSpec.describe SynthWorld::Gateway::Configuration do
       expect(ref.embedding_provider).to eq("embedding")
     end
 
+    it "defaults gatekeeper_provider to 'gatekeeper'" do
+      expect(ref.gatekeeper_provider).to eq("gatekeeper")
+    end
+
     it "reads explicit provider overrides from the gateway config" do
       path = write_gateway(<<~YAML)
         synthetics:
@@ -142,11 +146,13 @@ RSpec.describe SynthWorld::Gateway::Configuration do
             main_provider: openai-premium
             processing_provider: fast
             embedding_provider: local-embed
+            gatekeeper_provider: strict-judge
       YAML
       ref = described_class.from_file(path).synthetics.first
       expect(ref.main_provider).to eq("openai-premium")
       expect(ref.processing_provider).to eq("fast")
       expect(ref.embedding_provider).to eq("local-embed")
+      expect(ref.gatekeeper_provider).to eq("strict-judge")
     end
   end
 end
