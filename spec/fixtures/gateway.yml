@@ -3,6 +3,17 @@ socket_dir: /tmp/synth
 pid_file: /tmp/synth/synth.pid
 log_file: /tmp/synth/synth.log
 
+providers:
+  embedding:
+    provider: ollama
+    model: nomic-embed-text
+  evaluation:
+    provider: ollama
+    model: "qwen2.5:3b"
+  default:
+    provider: openrouter
+    model: "google/gemma-4-26b-a4b-it:free"
+
 synthetics:
   - name: cher
     config: spec/fixtures/synthetics/cher.yml

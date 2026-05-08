@@ -9,6 +9,7 @@ module SynthWorld
 end
 
 require_relative "gateway/synthetic_reference"
+require_relative "gateway/provider"
 require_relative "gateway/configuration"
 require_relative "gateway/app"
 
