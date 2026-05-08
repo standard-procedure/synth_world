@@ -5,14 +5,9 @@ module SynthWorld
   class Synthetic::Reply < Literal::Data
     prop :message, SynthWorld::Synthetic::Message
     prop :response, RubyLLM::Message
-    prop :replying_to, String, default: -> { @message.from }
-    prop :contents, String, default: -> { @response.content }
+    prop :time, Time, default: -> { Time.now }
+    prop :headers, _Hash(Symbol, _Any), default: {}.freeze
 
-    def to_memory
-      <<~MEMORY
-        - #{@message.time.iso8601} - replying-to: #{@replying_to}
-          #{@contents}
-      MEMORY
-    end
+    def contents = @response.content
   end
 end

@@ -5,7 +5,7 @@ require "tmpdir"
 
 RSpec.describe SynthWorld::Synthetic::Memory do
   let(:tmpdir) { Dir.mktmpdir("synth_memory_test") }
-  let(:time) { Time.new(2026, 5, 7, 9, 0, 0) }
+  let(:time)   { Time.new(2026, 5, 7, 9, 0, 0) }
   after { FileUtils.rm_rf(tmpdir) }
 
   let(:synthetic) do
@@ -22,10 +22,7 @@ RSpec.describe SynthWorld::Synthetic::Memory do
   subject(:memory) { described_class.new(synthetic: synthetic, workspace: workspace) }
 
   let(:working_memory) { File.read("#{workspace}/working.md") }
-
-  # RubyLLM::Message can't easily be constructed in tests; stub is_a? so
-  # Literal::Data's type check passes while keeping the double lightweight
-  let(:llm_response) { RubyLLM::Message.new(role: :assistant, content: "Hi there!") }
+  let(:llm_response)   { RubyLLM::Message.new(role: :assistant, content: "Hi there!") }
 
   # Drain N items from the queue by processing them inside an Async block.
   # This avoids starting the infinite loop, keeping reactor teardown clean.
@@ -39,7 +36,7 @@ RSpec.describe SynthWorld::Synthetic::Memory do
   end
 
   describe "#process_incoming" do
-    let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", from: "baz", time: time) }
+    let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", time: time, headers: {from: "baz"}) }
 
     it "appends the message to the working memory file" do
       memory.process_incoming(message)
@@ -56,11 +53,11 @@ RSpec.describe SynthWorld::Synthetic::Memory do
     it "records the timestamp" do
       memory.process_incoming(message)
       drain(1)
-      expect(working_memory).to include(time.iso8601)
+      expect(working_memory).to include(time.utc.iso8601)
     end
 
     it "appends rather than overwrites" do
-      msg2 = SynthWorld::Synthetic::Message.new(contents: "Again", from: "baz", time: time)
+      msg2 = SynthWorld::Synthetic::Message.new(contents: "Again", time: time, headers: {from: "baz"})
       memory.process_incoming(message)
       memory.process_incoming(msg2)
       drain(2)
@@ -70,8 +67,8 @@ RSpec.describe SynthWorld::Synthetic::Memory do
   end
 
   describe "#process_outgoing" do
-    let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", from: "baz", time: time) }
-    let(:reply) { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
+    let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", time: time, headers: {from: "baz"}) }
+    let(:reply)   { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response, headers: {"replying-to": "baz"}) }
 
     it "appends the reply to the working memory file" do
       memory.process_outgoing(reply)
@@ -87,8 +84,8 @@ RSpec.describe SynthWorld::Synthetic::Memory do
   end
 
   describe "ordering" do
-    let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", from: "baz", time: time) }
-    let(:reply) { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
+    let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", time: time, headers: {from: "baz"}) }
+    let(:reply)   { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
 
     it "preserves incoming-then-outgoing order" do
       memory.process_incoming(message)
