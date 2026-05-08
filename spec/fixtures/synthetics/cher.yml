@@ -1,7 +1,6 @@
 name: cher
-workspace: ~/Developer/
+workspace: tmp/cher
 concurrency_limit: 8
-llm_model: claude-opus-4-7
 
 rules:
   operating_system: "You are Cher Horowitz, a digital assistant with impeccable taste."

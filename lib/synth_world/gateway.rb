@@ -53,12 +53,15 @@ module SynthWorld
     end
 
     def start_synthetic(ref)
-      contexts = contexts_for(ref)
+      providers = providers_for(ref)
       synth = Synthetic.from_file(
         ref.config_path,
-        main_context: contexts[:main],
-        processing_context: contexts[:processing],
-        embedding_context: contexts[:embedding]
+        main_context: providers[:main].context,
+        main_provider: providers[:main].provider,
+        processing_context: providers[:processing].context,
+        processing_provider: providers[:processing].provider,
+        embedding_context: providers[:embedding].context,
+        embedding_provider: providers[:embedding].provider
       )
 
       socket_path = "#{@config.socket_dir}/#{ref.name}.sock"
@@ -117,10 +120,14 @@ module SynthWorld
     end
 
     def contexts_for(ref)
+      providers_for(ref).transform_values(&:context)
+    end
+
+    def providers_for(ref)
       {
-        main: @config.providers.fetch(ref.main_provider).context,
-        processing: @config.providers.fetch(ref.processing_provider).context,
-        embedding: @config.providers.fetch(ref.embedding_provider).context
+        main: @config.providers.fetch(ref.main_provider),
+        processing: @config.providers.fetch(ref.processing_provider),
+        embedding: @config.providers.fetch(ref.embedding_provider)
       }
     end
   end
