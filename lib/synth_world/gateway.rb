@@ -49,8 +49,17 @@ module SynthWorld
     end
 
     def start_synthetic(ref)
-      # TODO: load ref.config_path, build Synthetic, connect Unix socket, start loop
+      _contexts = contexts_for(ref)
+      # TODO: load ref.config_path, build Synthetic with contexts, connect Unix socket, start loop
       loop { sleep 10 }
+    end
+
+    def contexts_for(ref)
+      {
+        main: @config.providers.fetch(ref.main_provider).context,
+        processing: @config.providers.fetch(ref.processing_provider).context,
+        embedding: @config.providers.fetch(ref.embedding_provider).context
+      }
     end
   end
 end

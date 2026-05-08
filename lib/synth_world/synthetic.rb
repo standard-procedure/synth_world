@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "async/semaphore"
+require "ruby_llm"
 require_relative "types"
 
 module SynthWorld
@@ -24,6 +25,9 @@ module SynthWorld
 
     prop :rules, _Hash(Symbol, String)
     prop :processors, _Hash(Symbol, Synthetic::Processor), default: -> { default_processors }
+    prop :main_context, _Nilable(RubyLLM::Context)
+    prop :processing_context, _Nilable(RubyLLM::Context)
+    prop :embedding_context, _Nilable(RubyLLM::Context)
     prop :state, _Hash(Symbol, _Float), default: -> { {anxiety: 0.0, arousal: 0.0, temperature: 0.7} }
     prop :status, _OneOf(:offline, :asleep, :idle, :busy), default: :offline
     prop :active, _Boolean, default: true
