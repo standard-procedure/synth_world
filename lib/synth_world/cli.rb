@@ -13,7 +13,9 @@ require_relative "cli/server"
 
 module SynthWorld
   class CLI < Thor
-    desc "server SUBCOMMAND", "Manage the SynthWorld gateway server"
+    desc "gateway [COMMAND]", "Manage the SynthWorld gateway server"
+    subcommand "gateway", CLI::Server
+    desc "server [COMMAND]", "Alias for `gateway`"
     subcommand "server", CLI::Server
   end
 end
