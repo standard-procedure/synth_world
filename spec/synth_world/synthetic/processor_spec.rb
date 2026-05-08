@@ -10,7 +10,7 @@ RSpec.describe SynthWorld::Synthetic::Processor do
   # Literal::Data freezes instances, so we can't set instance vars after super.
   # Capture test state in closure variables instead.
   let(:results) { [] }
-  let(:ticks)   { [] }
+  let(:ticks) { [] }
 
   let(:synthetic) do
     SynthWorld::Synthetic.new(
@@ -25,8 +25,8 @@ RSpec.describe SynthWorld::Synthetic::Processor do
     t = ticks
     Class.new(described_class) do
       action(:greet) { |name| r << "Hello, #{name}!" }
-      action(:add)   { |a, b| r << a + b }
-      every(0.05)    { t << Time.now }
+      action(:add) { |a, b| r << a + b }
+      every(0.05) { t << Time.now }
     end
   end
 

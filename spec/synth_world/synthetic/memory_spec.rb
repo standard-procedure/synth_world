@@ -5,7 +5,7 @@ require "tmpdir"
 
 RSpec.describe SynthWorld::Synthetic::Memory do
   let(:tmpdir) { Dir.mktmpdir("synth_memory_test") }
-  let(:time)   { Time.new(2026, 5, 7, 9, 0, 0) }
+  let(:time) { Time.new(2026, 5, 7, 9, 0, 0) }
   after { FileUtils.rm_rf(tmpdir) }
 
   let(:synthetic) do
@@ -22,7 +22,7 @@ RSpec.describe SynthWorld::Synthetic::Memory do
   subject(:memory) { described_class.new(synthetic: synthetic, workspace: workspace) }
 
   let(:working_memory) { File.read("#{workspace}/working.md") }
-  let(:llm_response)   { RubyLLM::Message.new(role: :assistant, content: "Hi there!") }
+  let(:llm_response) { RubyLLM::Message.new(role: :assistant, content: "Hi there!") }
 
   # Drain N items from the queue by processing them inside an Async block.
   # This avoids starting the infinite loop, keeping reactor teardown clean.
@@ -85,7 +85,7 @@ RSpec.describe SynthWorld::Synthetic::Memory do
 
   describe "ordering" do
     let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", time: time, headers: {from: "baz"}) }
-    let(:reply)   { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
+    let(:reply) { SynthWorld::Synthetic::Reply.new(message: message, response: llm_response) }
 
     it "preserves incoming-then-outgoing order" do
       memory.process_incoming(message)

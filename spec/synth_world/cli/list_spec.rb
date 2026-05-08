@@ -9,7 +9,7 @@ RSpec.describe SynthWorld::CLI do
   end
 
   let(:synthetics_response) { '{"synthetics":["cher","dionne"]}' }
-  let(:empty_response)      { '{"synthetics":[]}' }
+  let(:empty_response) { '{"synthetics":[]}' }
 
   before { allow(Net::HTTP).to receive(:get).and_return(synthetics_response) }
 

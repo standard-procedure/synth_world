@@ -27,7 +27,7 @@ module SynthWorld
     def context
       provider_sym = @provider
       model_name = @model
-      base_url = @api_base || (provider_sym == :ollama ? OLLAMA_DEFAULT_BASE : nil)
+      base_url = @api_base || ((provider_sym == :ollama) ? OLLAMA_DEFAULT_BASE : nil)
       env_key = API_KEY_ENV[provider_sym]
 
       RubyLLM.context do |config|

@@ -6,8 +6,8 @@ RSpec.describe SynthWorld::Synthetic do
   let(:tmpdir) { Dir.mktmpdir("synth_test") }
   after { FileUtils.rm_rf(tmpdir) }
 
-  let(:time)         { Time.new(2026, 5, 8, 9, 0, 0) }
-  let(:message)      { SynthWorld::Synthetic::Message.new(contents: "hi", time: time, headers: {from: "baz"}) }
+  let(:time) { Time.new(2026, 5, 8, 9, 0, 0) }
+  let(:message) { SynthWorld::Synthetic::Message.new(contents: "hi", time: time, headers: {from: "baz"}) }
   let(:llm_response) { RubyLLM::Message.new(role: :assistant, content: "Hello!") }
 
   # Real RubyLLM::Context (not frozen) so we can stub `.chat`.

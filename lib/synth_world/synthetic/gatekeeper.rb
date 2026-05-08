@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-#
 module SynthWorld
   class Synthetic::Gatekeeper < Literal::Data
     prop :synthetic, SynthWorld::Synthetic
