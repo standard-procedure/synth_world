@@ -77,7 +77,11 @@ module SynthWorld
     end
 
     def reply_to message
-      response = RubyLLM.with_instructions(generate_system_prompt).with_tools(generate_tools).with_temperature(@state[:temperature]).tell(generate_prompt_for(message), with: message.attachment)
+      response = @main_context.chat
+        .with_instructions(generate_system_prompt)
+        .with_tools(generate_tools)
+        .with_temperature(@state[:temperature])
+        .ask(generate_prompt_for(message), with: message.attachment)
       Synthetic::Reply.new message: message, response: response
     end
 
