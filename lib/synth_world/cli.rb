@@ -10,12 +10,12 @@ end
 
 require_relative "cli/command"
 require_relative "cli/server"
+require_relative "cli/list"
 
 module SynthWorld
   class CLI < Thor
-    desc "gateway [COMMAND]", "Manage the SynthWorld gateway server"
-    subcommand "gateway", CLI::Server
-    desc "server [COMMAND]", "Alias for `gateway`"
+    desc "server [COMMAND]", "Manage the SynthWorld gateway server (aliased as `gateway`)"
     subcommand "server", CLI::Server
+    map "gateway" => "server"
   end
 end
