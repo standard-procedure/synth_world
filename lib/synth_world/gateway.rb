@@ -44,7 +44,7 @@ module SynthWorld
 
     def start_http_server
       Gateway::App.set :synthetic_names, @config.synthetics.map(&:name)
-      Gateway::App.run!(port: @config.port, bind: "localhost", server: %w[falcon webrick])
+      Gateway::App.run!(port: @config.port, bind: @config.bind, server: %w[falcon webrick])
     end
 
     def start_synthetic(ref)

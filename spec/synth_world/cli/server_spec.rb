@@ -7,6 +7,7 @@ RSpec.describe SynthWorld::CLI::Server do
   let(:config) do
     SynthWorld::Gateway::Configuration.new(
       port: 7001,
+      bind: "127.0.0.1",
       socket_dir: "#{tmpdir}/sockets",
       pid_file: "#{tmpdir}/synth.pid",
       log_file: "#{tmpdir}/synth.log",
