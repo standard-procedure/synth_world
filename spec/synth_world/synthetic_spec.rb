@@ -131,6 +131,36 @@ RSpec.describe SynthWorld::Synthetic do
     end
   end
 
+  describe "#dispatch + main loop" do
+    # Async::Queue#async runs the block inside an Async::Task that calls
+    # block.(task, *args). The block signature must take the task first,
+    # otherwise the queue item gets bound to whatever name and we end up
+    # passing an Async::Task to #process.
+    it "passes the queue item (not the Async::Task) to #process" do
+      received = []
+
+      captured_class = Class.new(described_class) do
+        define_method(:process) { |msg| received << msg }
+      end
+
+      synth = captured_class.new(
+        name: "loop-test", biography: "loop-test", workspace: tmpdir,
+        rules: {gatekeeper_input_rule: "", gatekeeper_output_rule: ""},
+        processors: {},
+        main_context: main_context
+      )
+
+      Async do |task|
+        Async { synth.send(:start_main_loop) }
+        synth.dispatch(message)
+        task.sleep(0.05)
+        synth.stop
+      end
+
+      expect(received).to eq([message])
+    end
+  end
+
   describe "#process" do
     it "passes the incoming message to each processor" do
       synthetic.send(:process, message)

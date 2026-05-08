@@ -71,7 +71,7 @@ module SynthWorld
 
     private def start_main_loop
       @status = :idle
-      @queue.async(parent: @semaphore) { |message| process message }
+      @queue.async(parent: @semaphore) { |_task, message| process(message) }
     ensure
       @status = :offline
     end
