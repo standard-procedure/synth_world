@@ -129,6 +129,40 @@ RSpec.describe SynthWorld::Synthetic do
       synth = described_class.from_file(yaml_path, main_context: main_context)
       expect(synth.instance_variable_get(:@main_context)).to eq(main_context)
     end
+
+    it "wires up a default Memory processor" do
+      synth = described_class.from_file(yaml_path)
+      processors = synth.instance_variable_get(:@processors)
+      expect(processors[:memory]).to be_a(SynthWorld::Synthetic::Memory)
+    end
+  end
+
+  describe "#generate_message_history" do
+    let(:synth) do
+      described_class.new(
+        name: "test", biography: "test", workspace: tmpdir,
+        rules: {gatekeeper_input_rule: "", gatekeeper_output_rule: ""}
+      )
+    end
+
+    it "returns the contents of working memory from the memory processor" do
+      memory = synth.instance_variable_get(:@processors)[:memory]
+      memory.process_incoming(SynthWorld::Synthetic::Message.new(contents: "earlier message", time: time, headers: {from: "baz"}))
+      Async do
+        action, args = memory.queue.pop
+        memory.instance_exec(*args, &action)
+      end
+      expect(synth.generate_message_history).to include("earlier message")
+    end
+
+    it "returns an empty string when there is no memory processor" do
+      synth_without_memory = described_class.new(
+        name: "no-mem", biography: "x", workspace: tmpdir,
+        rules: {gatekeeper_input_rule: "", gatekeeper_output_rule: ""},
+        processors: {}
+      )
+      expect(synth_without_memory.generate_message_history).to eq("")
+    end
   end
 
   describe "#safe_process" do

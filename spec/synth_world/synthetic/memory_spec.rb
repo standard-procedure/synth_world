@@ -94,4 +94,30 @@ RSpec.describe SynthWorld::Synthetic::Memory do
       expect(working_memory.index("Hello")).to be < working_memory.index("Hi there!")
     end
   end
+
+  describe "#working_memory" do
+    let(:message) { SynthWorld::Synthetic::Message.new(contents: "Hello", time: time, headers: {from: "baz"}) }
+
+    it "returns an empty string when nothing has been written yet" do
+      expect(memory.working_memory).to eq("")
+    end
+
+    it "returns the contents of the working memory file once messages exist" do
+      memory.process_incoming(message)
+      drain(1)
+      expect(memory.working_memory).to include("Hello")
+      expect(memory.working_memory).to include("from: baz")
+    end
+
+    it "creates the workspace directory on first write if missing" do
+      missing_dir = "#{tmpdir}/missing/memory"
+      m = described_class.new(synthetic: synthetic, workspace: missing_dir)
+      m.process_incoming(message)
+      Async do
+        action, args = m.queue.pop
+        m.instance_exec(*args, &action)
+      end
+      expect(File.exist?("#{missing_dir}/working.md")).to be true
+    end
+  end
 end

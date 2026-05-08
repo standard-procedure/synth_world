@@ -53,7 +53,6 @@ module SynthWorld
         biography: data["biography"] || "",
         workspace: File.expand_path(data.fetch("workspace")),
         rules: rules,
-        processors: {},
         concurrency_limit: data["concurrency_limit"] || 8,
         main_context: main_context,
         main_provider: main_provider,
@@ -155,8 +154,7 @@ module SynthWorld
     end
 
     def generate_message_history
-      # TODO: read working memory from workspace
-      ""
+      @processors[:memory]&.working_memory || ""
     end
 
     def generate_prompt_for message
