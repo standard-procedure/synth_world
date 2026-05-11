@@ -17,7 +17,8 @@ module SynthWorld
       xai: "XAI_API_KEY"
     }.freeze
 
-    OLLAMA_DEFAULT_BASE = "http://localhost:11434/v1"
+    OLLAMA_HOST = ENV.fetch("OLLAMA_HOST") { "localhost:11434" }
+    OLLAMA_DEFAULT_BASE = "http://#{OLLAMA_HOST}/v1"
 
     prop :name, String
     prop :provider, Symbol
