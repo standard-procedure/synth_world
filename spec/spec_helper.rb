@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "synth_world"
+require "plumbing"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
