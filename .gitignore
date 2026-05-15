@@ -12,3 +12,6 @@
 
 # Local environment variables — never commit
 .env
+
+# file system crap
+.DS_Store
