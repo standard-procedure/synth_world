@@ -222,6 +222,29 @@ RSpec.describe Plumbing::Actor::Async do
     end
   end
 
+  describe "user-supplied block" do
+    it "flows the call-site block through to the implementation as &block" do
+      klass = Class.new do
+        include Plumbing::Actor
+
+        async :greet do
+          param :name, String
+          returns { |name:, &block| block&.call("Hello #{name}") }
+        end
+      end
+
+      Sync do
+        actor = klass.new
+        actor.worker.call
+        # The implementation calls the block synchronously during deliver,
+        # so by the time .await returns, the block has run.
+        captured = nil
+        actor.greet(name: "X") { |result| captured = result }.await
+        expect(captured).to eq "Hello X"
+      end
+    end
+  end
+
   describe "reply pattern" do
     # Same fire-and-forget reply pattern as the inline spec, but async
     # introduces a synchronization problem: the reply lands in the caller's

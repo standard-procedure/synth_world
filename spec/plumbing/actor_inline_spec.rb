@@ -197,6 +197,56 @@ RSpec.describe Plumbing::Actor::Inline do
     end
   end
 
+  describe "user-supplied block" do
+    # The implementation is defined as a real method on the host class
+    # (`_validated_<name>_implementation`) so the call-site block flows
+    # through to it as `&block`. `yield` is unreachable because the parser
+    # rejects it inside a proc literal — use `&block` instead.
+    it "is accessible inside the implementation via &block" do
+      klass = Class.new do
+        include Plumbing::Actor
+
+        async :greet do
+          param :name, String
+          returns { |name:, &block| block&.call("Hello #{name}") }
+        end
+      end
+
+      captured = nil
+      klass.new.greet(name: "X") { |result| captured = result }.await
+      expect(captured).to eq "Hello X"
+    end
+
+    it "is nil when no block is supplied at the call site" do
+      klass = Class.new do
+        include Plumbing::Actor
+
+        async :probe do
+          returns { |&block| block }
+        end
+      end
+
+      expect(klass.new.probe.await).to be_nil
+    end
+
+    it "leaves the implementation result unchanged regardless of the block" do
+      klass = Class.new do
+        include Plumbing::Actor
+
+        async :greet do
+          param :name, String
+          returns do |name:, &block|
+            block&.call(name)
+            "result:#{name}"
+          end
+        end
+      end
+
+      message = klass.new.greet(name: "X") { :ignored_side_effect }
+      expect(message.await).to eq "result:X"
+    end
+  end
+
   describe "reply pattern" do
     # The non-blocking reply pattern: a Caller fires a fire-and-forget message
     # at a Worker, passing `sender: self`. The Worker, after doing its work,
