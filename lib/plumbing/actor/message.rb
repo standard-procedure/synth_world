@@ -3,6 +3,8 @@
 module Plumbing
   module Actor
     class Message < Literal::Object
+      include Plumbing::Awaitable
+
       prop :actor, Actor, writer: false
       prop :method, Symbol, writer: false
       prop :implementation, Symbol, writer: false, default: -> { :"_#{@method}" }

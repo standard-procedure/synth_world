@@ -221,4 +221,61 @@ RSpec.describe Plumbing::Actor::Async do
       end
     end
   end
+
+  describe "reply pattern" do
+    # Same fire-and-forget reply pattern as the inline spec, but async
+    # introduces a synchronization problem: the reply lands in the caller's
+    # queue asynchronously, so the test can't simply read an ivar afterwards.
+    # We use a stdlib ::Queue inside the caller to block-with-timeout until
+    # the reply has actually been processed.
+    let(:worker_class) do
+      Class.new do
+        include Plumbing::Actor
+
+        async :perform do
+          param :payload, String
+          returns do |payload:|
+            current_sender&.receive_reply(text: "echo: #{payload}")
+            :acked
+          end
+        end
+      end
+    end
+
+    let(:caller_class) do
+      Class.new do
+        include Plumbing::Actor
+
+        attr_reader :received
+
+        def initialize
+          super
+          @received = ::Queue.new
+        end
+
+        async :receive_reply do
+          param :text, String
+          returns { |text:| @received.push(text) }
+        end
+      end
+    end
+
+    it "delivers a fire-and-forget reply back to the original sender" do
+      Sync do
+        worker = worker_class.new
+        caller = caller_class.new
+        worker.worker.call
+        caller.worker.call
+
+        # Fire request directly (no Caller intermediary); we already trust
+        # `sender: caller` from the current_sender specs above.
+        worker.perform(payload: "ping", sender: caller).await
+
+        # `perform` has now run to :done — its impl called
+        # current_sender.receive_reply, which enqueued a message onto caller.
+        # Block (with timeout) until caller's queue produces the reply.
+        expect(caller.received.pop(timeout: 2)).to eq "echo: ping"
+      end
+    end
+  end
 end

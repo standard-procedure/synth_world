@@ -5,6 +5,13 @@ require "yaml"
 
 module Plumbing
   class Error < StandardError; end
+
+  # Marker module for things that can be `await`-ed via Kernel#Await.
+  # Including this module advertises that the host class has a real `#await`
+  # method. We can't use `respond_to?(:await)` to detect this because
+  # `Kernel#Await` itself is aliased to `Kernel#await`, so every Ruby object
+  # responds to `:await`.
+  module Awaitable; end
 end
 
 require_relative "plumbing/version"
@@ -14,7 +21,7 @@ require_relative "plumbing/actor"
 module Kernel
   def Await(&block)
     result = block.call
-    result.respond_to?(:await) ? result.await : result
+    result.is_a?(Plumbing::Awaitable) ? result.await : result
   end
   alias_method :await, :Await
 end

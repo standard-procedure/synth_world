@@ -196,4 +196,73 @@ RSpec.describe Plumbing::Actor::Inline do
       end
     end
   end
+
+  describe "reply pattern" do
+    # The non-blocking reply pattern: a Caller fires a fire-and-forget message
+    # at a Worker, passing `sender: self`. The Worker, after doing its work,
+    # calls `current_sender.something(...)` to reply — itself a fire-and-forget
+    # message back to the caller. No `.await` from inside either implementation,
+    # so neither side can deadlock the other.
+    let(:worker_class) do
+      Class.new do
+        include Plumbing::Actor
+
+        async :perform do
+          param :payload, String
+          returns do |payload:|
+            current_sender&.receive_reply(text: "echo: #{payload}")
+            :acked
+          end
+        end
+      end
+    end
+
+    let(:caller_class) do
+      Class.new do
+        include Plumbing::Actor
+
+        attr_reader :replies
+
+        def initialize
+          super
+          @replies = []
+        end
+
+        async :start do
+          param :worker, Object
+          returns do |worker:|
+            worker.perform(payload: "ping-1", sender: self)
+            worker.perform(payload: "ping-2", sender: self)
+            :dispatched
+          end
+        end
+
+        async :receive_reply do
+          param :text, String
+          returns { |text:| @replies << text }
+        end
+      end
+    end
+
+    it "lets a worker reply to its sender without anyone blocking on await" do
+      worker = worker_class.new
+      caller = caller_class.new
+
+      # Inline dispatch is synchronous, so by the time start returns, both
+      # `perform` calls have run to completion (each one synchronously
+      # firing `receive_reply` on the caller before returning).
+      caller.start(worker: worker).await
+
+      expect(caller.replies).to eq ["echo: ping-1", "echo: ping-2"]
+    end
+
+    it "leaves current_sender nil at the outermost level after the chain unwinds" do
+      worker = worker_class.new
+      caller = caller_class.new
+
+      caller.start(worker: worker).await
+
+      expect(Fiber[Plumbing::Actor::FIBER_KEY]).to be_nil
+    end
+  end
 end
