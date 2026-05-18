@@ -3,27 +3,49 @@
 module Plumbing
   module Actor
     module Definitions
+      # Defines three methods on the instance:
+      #   `name` - this method can be called from outside of the actor, returning a message object that must be `await`ed to access the results
+      #   `_name` - this method runs inside the actor's context and validates the parameters passed before calling...
+      #   `_validated_#{name}_implementation` - this method actually runs the implementation of the method
+      #
+      # Example:
+      #     class Greeting < Literal::Data
+      #       include Plumbing::Actor
+      #
+      #       prop :name, String
+      #
+      #       async :say do
+      #         param :greeting, String, default: "Hello"
+      #         returns { "#{greeting} #{@name}" }
+      #       end
+      #     end
+      #
+      #     # Greeting has three methods - `say`, `_say` and `_validated_say_implementation`
+      #     #   the latter two called internally within the actor's context
+      #
+      #     @greeting = Greeting.new name: "Alice"
+      #     @result = @greeting.say "Hi there"
+      #     puts @result.await # => "Hi there Alice"
+      #     # ALTERNATIVE SYNTAX
+      #     puts await { @greeting.say "Hi there" }
       def async name, &config
         method = MethodDefinition.new(name: name.to_sym)
         method.instance_eval(&config)
         raise ArgumentError, "async :#{name} requires a `returns { ... }` block" if method.implementation.nil?
 
-        # Define the implementation as a real method on the host class so that
-        # the user-supplied block at the call site flows through to it as the
-        # method's block (accessible via `&block` in the `returns` signature).
-        # `instance_exec` can't forward a block separately from the proc-as-block,
-        # so we use `define_method`-with-proc instead.
-        impl_name = :"_validated_#{name}_implementation"
-        define_method(impl_name, &method.implementation)
-
+        # external async method
         define_method name.to_sym do |sender: nil, **params, &block|
           worker.post name.to_sym, sender: sender, **params, &block
         end
 
+        # internal validator
         define_method :"_#{name}" do |**params, &block|
           validated = method.params_class.new(**params).to_h
           send(impl_name, **validated, &block)
         end
+
+        # internal implementation
+        define_method(:"_validated_#{name}_implementation", &method.implementation)
       end
 
       class MethodDefinition < Literal::Struct
